@@ -1,0 +1,17 @@
+"fish t-shirt" by GLEB GUBKIN
+Original work: https://sketchfab.com/3d-models/fish-t-shirt-b2bf0e93920f42618fb0255e137a61c9
+License: Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+
+Source adaptation distributed by EdgeXGroups:
+https://github.com/EdgeXGroups/EDGE-Website/blob/main/public/models/tee.glb
+Source README describes merging, decimation, rescaling, re-UV, whitening and Draco compression.
+Original attribution/license verified by the parent workflow through public Sketchfab metadata on 2026-11-17.
+
+Further modifications for this development preview: decompressed GLB, plain fabric material, interactive rendering, color options, and projected BUL BUL CORP print artwork. This is not an endorsement by the original creator. Retain attribution and indicate adaptations on redistribution.
+
+BUL BUL CORP development adaptation (2026-11-17): Draco decompression, replacement of materials with neutral fabric colors, and surface-projected BUL BUL CORP artwork. Original geometry retained from the EDGE adaptation. No endorsement by original model author is implied. This is a concept visualization, not an exact scan of a manufactured BUL BUL CORP product.
+
+Test revision 2: large central cloth folds softened by a continuous depth deformation. Original 119215 triangles retained to protect seams. Geometry quantized and EXT_meshopt_compression encoded using glTF Transform; no topology reduction in the released model. Print PNGs converted to lossless WebP with exact RGBA round-trip verification. Meshoptimizer decoder: Copyright (c) 2016-2026 Arseny Kapoulkine, MIT (../MESHOPT-LICENSE.txt).
+
+Main-site revision 5: back artwork enlarged and positioned individually to follow approved concept mockup proportions; horse 0.34m/cy0.49, leopard0.32m/cy0.48, eagle0.35m/cy0.49. Artwork aspect ratios preserved. These are preview coordinates, not production print specifications.
