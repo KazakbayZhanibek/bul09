@@ -32,13 +32,14 @@
   matchMedia('(min-width: 701px)').addEventListener('change', () => setMenu(false));
 
   const slides = [
-    { file: 'canyon', mobile: 'canyon-mobile', label: 'Барс в каньоне', alt: 'Песочная футболка с принтом «Барс» на фоне скал каньона.' },
-    { file: 'hero', mobile: 'hero-mobile', label: 'Беркут в горах', alt: 'Беркут на спине чёрной футболки. Модель на фоне горного хребта.' },
-    { file: 'grassland', mobile: 'grassland-mobile', label: 'Всадник в степи', alt: 'Мужчина ведёт лошадь по степи. На футболке цвета хаки — принт «Всадник».' }
+    { product: 'leopard', color: 2, file: 'canyon', mobile: 'canyon-mobile', label: 'Барс в каньоне', alt: 'Песочная футболка с принтом «Барс» на фоне скал каньона.' },
+    { product: 'eagle', color: 0, file: 'hero', mobile: 'hero-mobile', label: 'Беркут в горах', alt: 'Беркут на спине чёрной футболки. Модель на фоне горного хребта.' },
+    { product: 'horse', color: 1, file: 'grassland', mobile: 'grassland-mobile', label: 'Всадник в степи', alt: 'Мужчина ведёт лошадь по степи. На футболке цвета хаки — принт «Всадник».' }
   ];
   const hero = document.querySelector('.hero');
   const heroImage = document.getElementById('campaign-image');
   const mobileSource = document.querySelector('#campaign-picture source');
+  const photoProduct = document.querySelector('.photo-product');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let currentFrame = 0;
   let previousPhoto;
@@ -63,6 +64,7 @@
     heroImage.alt = slide.alt;
     document.getElementById('photo-index').textContent = String(currentFrame + 1).padStart(2, '0');
     document.getElementById('photo-name').textContent = slide.label;
+    photoProduct.setAttribute('aria-label', `Рассмотреть принт «${products.find(product => product.id === slide.product).name}» на фото`);
     if (snapshot) {
       heroImage.decode().then(() => {
         if (!snapshot.isConnected) return;
@@ -117,16 +119,67 @@
 
   catalog.innerHTML = products.map(product => {
     const color = colors[chosenColors.get(product.id)];
-    return `<article class="product-card" data-product="${product.id}">
+    return `<article class="product-card" id="print-${product.id}" data-product="${product.id}">
       <button class="card-image" type="button" data-open aria-haspopup="dialog" aria-label="Рассмотреть принт «${product.name}»">
         <img src="${art(product, color)}" alt="${backLabel(product, color)}" loading="lazy" decoding="async" width="810" height="1000">
         <span class="card-inspect" aria-hidden="true"><svg class="icon"><use href="#i-plus"/></svg></span>
       </button>
       <div class="card-info"><h3><button class="card-name" type="button" data-open aria-haspopup="dialog">${product.name}</button></h3>
         <div class="swatches" role="group" aria-label="Цвет футболки «${product.name}»">${swatches(product)}</div>
-      </div><p class="card-caption">${product.caption}</p>
+      </div><div class="card-foot"><p class="card-caption">${product.caption}</p><span class="card-color-name">${color.name}</span></div>
     </article>`;
   }).join('');
+
+  const printNav = document.querySelector('.print-nav');
+  const cards = Array.from(catalog.children);
+  const mobileCatalog = matchMedia('(max-width: 640px)');
+  printNav.innerHTML = products.map((product, index) => `<button type="button" data-print="${index}"
+    aria-controls="print-${product.id}" aria-pressed="${index === 0}">${product.name}</button>`).join('');
+  printNav.hidden = false;
+
+  function goToCard(index, animate) {
+    if (!mobileCatalog.matches) return;
+    catalog.scrollTo({
+      left: cards[index].offsetLeft - cards[0].offsetLeft,
+      behavior: animate && !reducedMotion.matches ? 'smooth' : 'instant'
+    });
+  }
+  function syncPrintNav() {
+    if (!mobileCatalog.matches) return;
+    const middle = catalog.getBoundingClientRect().left + catalog.clientWidth / 2;
+    let nearest = 0;
+    let distance = Infinity;
+    cards.forEach((card, index) => {
+      const bounds = card.getBoundingClientRect();
+      const gap = Math.abs(bounds.left + bounds.width / 2 - middle);
+      if (gap < distance) { distance = gap; nearest = index; }
+    });
+    Array.from(printNav.children).forEach((button, index) => {
+      const current = index === nearest;
+      cards[index].classList.toggle('in-view', current);
+      if (button.getAttribute('aria-pressed') !== String(current)) button.setAttribute('aria-pressed', String(current));
+    });
+  }
+  catalog.addEventListener('scroll', syncPrintNav, { passive: true });
+  catalog.addEventListener('focusin', event => {
+    const card = event.target.closest('.product-card');
+    if (card && event.target.matches(':focus-visible')) goToCard(cards.indexOf(card), false);
+  });
+  window.addEventListener('resize', syncPrintNav);
+  syncPrintNav();
+  printNav.addEventListener('click', event => {
+    const button = event.target.closest('[data-print]');
+    if (button) goToCard(Number(button.dataset.print), true);
+  });
+  printNav.addEventListener('keydown', event => {
+    const index = Number(event.target.dataset.print);
+    const next = { ArrowLeft: index - 1, ArrowRight: index + 1, Home: 0, End: cards.length - 1 }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    const target = Math.max(0, Math.min(cards.length - 1, next));
+    printNav.children[target].focus({ preventScroll: true });
+    goToCard(target, true);
+  });
 
   function updateSwatches(group, index) {
     group.querySelectorAll('[data-color]').forEach(button => {
@@ -140,6 +193,7 @@
     const image = card.querySelector('img');
     image.src = art(product, colors[index]);
     image.alt = backLabel(product, colors[index]);
+    card.querySelector('.card-color-name').textContent = colors[index].name;
     updateSwatches(card, index);
   }
 
@@ -148,6 +202,7 @@
     const color = colors[index];
     dialogImage.src = art(inspected, color, showingFront);
     dialogImage.alt = showingFront ? `Чёрная футболка «${inspected.name}», исходный эскиз знака на груди` : backLabel(inspected, color);
+    document.getElementById('color-purpose').textContent = showingFront ? 'Цвет модели в 3D' : 'Цвет футболки';
     document.getElementById('product-color').textContent = color.name;
     updateSwatches(detailSwatches, index);
     dialog.querySelector('.front-note').hidden = !showingFront;
@@ -171,6 +226,15 @@
     document.body.classList.add('modal-open');
     dialog.querySelector('.dialog-close').focus({ preventScroll: true });
   }
+
+  photoProduct.addEventListener('click', event => {
+    event.preventDefault();
+    const shot = slides[currentFrame];
+    const product = products.find(item => item.id === shot.product);
+    setColor(product, shot.color);
+    openProduct(product, photoProduct);
+  });
+  photoProduct.setAttribute('aria-haspopup', 'dialog');
 
   catalog.addEventListener('click', event => {
     const card = event.target.closest('[data-product]');
@@ -200,13 +264,12 @@
     if (swatch) {
       const index = Number(swatch.dataset.color);
       setColor(inspected, index);
-      showingFront = false;
       updateDetail();
       window.BulbulStudio?.setProduct(inspected.id, index);
     }
     if (event.target.closest('#product-studio')) {
       goingToStudio = true;
-      window.BulbulStudio?.setProduct(inspected.id, chosenColors.get(inspected.id));
+      window.BulbulStudio?.setProduct(inspected.id, chosenColors.get(inspected.id), showingFront ? 'front' : 'back');
       dialog.close();
     }
   });
@@ -218,12 +281,15 @@
         title.tabIndex = -1;
         title.focus({ preventScroll: true });
       }
-    } else {
+    } else if (document.activeElement === document.body) {
       opener?.focus({ preventScroll: true });
     }
   });
   window.addEventListener('bulbulstudiochange', event => {
     const product = products.find(item => item.id === event.detail.id);
-    if (product && colors[event.detail.color]) setColor(product, event.detail.color);
+    if (product && colors[event.detail.color]) {
+      setColor(product, event.detail.color);
+      goToCard(products.indexOf(product), false);
+    }
   });
 })();

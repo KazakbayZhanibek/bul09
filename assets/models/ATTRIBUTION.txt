@@ -15,6 +15,11 @@ and hem. Shoulder stitching, fabric UVs and the repeating cotton jersey normal
 and roughness maps were prepared for this collection. The website changes the
 cloth color and applies the collection's existing front and back artwork.
 
+The field-tee-v2.glb edition revises the drape at the shoulders, underarms
+and lower body. Its stitching follows the reshaped fabric. Yarn color,
+surface normals and roughness are embedded as procedural single-jersey
+knit maps. The material and print respond to studio lighting together.
+
 Source geometry and modifications are identified here for redistribution.
 The model illustrates a collection concept. The source author does not
 endorse the adaptation.

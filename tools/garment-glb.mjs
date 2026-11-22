@@ -40,12 +40,16 @@ export async function writeGarment(file, panels, encoder, imageDirectory) {
   const extName = 'EXT_meshopt_compression';
   const gltf = {
     asset: { version: '2.0', generator: 'BUL BUL CORP field tee asset builder', copyright: 'Adapted from Oversized t-shirt by kylelhb, CC BY 4.0. See ATTRIBUTION.txt.' },
-    extensionsUsed: [extName, 'KHR_mesh_quantization'], extensionsRequired: [extName, 'KHR_mesh_quantization'],
+    extensionsUsed: [extName, 'KHR_mesh_quantization', 'KHR_materials_sheen', 'KHR_materials_specular'], extensionsRequired: [extName, 'KHR_mesh_quantization'],
     scene: 0, scenes: [{ name: 'Field collection', nodes: [] }], nodes: [], meshes: [],
     buffers: [], bufferViews: [], accessors: [], images: [], textures: [],
     samplers: [{ minFilter: 9987, magFilter: 9729, wrapT: 10497, wrapS: 10497 }],
-    materials: [{ name: 'Combed cotton jersey', doubleSided: true, normalTexture: {index: 0, scale: .68},
-      pbrMetallicRoughness: {baseColorFactor:[.14,.15,.105,1], roughnessFactor:.96, metallicFactor:0, metallicRoughnessTexture:{index:1}} }],
+    materials: [{ name: 'Combed cotton jersey', doubleSided: true, normalTexture: {index: 0, scale: .9},
+      extensions: {
+        KHR_materials_sheen: { sheenColorFactor: [.045,.041,.037], sheenRoughnessFactor: .94 },
+        KHR_materials_specular: { specularFactor: .36 },
+      },
+      pbrMetallicRoughness: {baseColorFactor:[.14,.15,.105,1], baseColorTexture:{index:2}, roughnessFactor:.99, metallicFactor:0, metallicRoughnessTexture:{index:1}} }],
   };
   const chunks = [];
   let stored = 0, decoded = 0;
@@ -97,7 +101,7 @@ export async function writeGarment(file, panels, encoder, imageDirectory) {
     gltf.scenes[0].nodes.push(gltf.nodes.length);
     gltf.nodes.push({ name:panel.name, mesh, scale:[unit,unit,unit], translation:origin });
   }
-  for (const name of ['jersey-normal.png','jersey-roughness.png']) {
+  for (const name of ['jersey-v2-normal.png','jersey-v2-roughness.png','jersey-v2-dye.png']) {
     const bytes = await readFile(new URL(name,imageDirectory));
     const bufferView = gltf.bufferViews.push({buffer:0,byteOffset:append(bytes),byteLength:bytes.length})-1;
     const source = gltf.images.push({bufferView,mimeType:'image/png',name})-1;

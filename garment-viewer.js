@@ -24,7 +24,7 @@ function mount(host) {
   renderer.setClearColor(0xddd9cb,0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.13;
+  renderer.toneMappingExposure = 1.04;
 
   const controls = document.createElement('div');
   controls.className = 'viewer-controls';
@@ -37,7 +37,7 @@ function mount(host) {
   status.setAttribute('role','status'); status.dataset.modelProgress = '';
   status.textContent = 'Загружаем модель…'; controls.append(status); host.append(controls);
 
-  const state = {id:'horse',color:1,rx:-.045,ry:Math.PI,detail:false};
+  const state = {id:'horse',color:1,rx:-.045,ry:Math.PI,detail:false,inspection:'print'};
   try {
     const saved = JSON.parse(sessionStorage.getItem('bulbul3d-selection') || '{}');
     if(Number.isFinite(saved.rx) && Number.isFinite(saved.ry)){
@@ -47,11 +47,13 @@ function mount(host) {
   const scene = new THREE.Scene(), pivot = new THREE.Group();
   scene.add(pivot); pivot.rotation.set(state.rx,state.ry,0);
   const camera = new THREE.PerspectiveCamera(28,1,.01,15);
-  scene.add(new THREE.HemisphereLight(0xf8f5ea,0x766d5f,1.12));
+  scene.add(new THREE.HemisphereLight(0xfffaf2, 0xb9aa98, 1.35));
+  // A sideways key resolves knit relief. Diffuse bounce from the right keeps
+  // the shadowed inside of the sleeve in the same tonal range as the packshots.
   const lights = [
-    [0xfff4e7,2.65, -2.2,2.5,2.1],
-    [0xfff3e0,2.25, 2.4,1.9,-1.45],
-    [0xc8d2e3,.68, -.9,.2,-2.5],
+    [0xfff1df, 2.5, -3.2, 2.5, 2.0],
+    [0xe1e7ef, 0.75, 2.1, 0.5, 2.7],
+    [0xf7ead6, 1.45, 1.9, 1.9, -2.7],
   ];
   for(const [color,intensity,x,y,z] of lights) {
     const lamp = new THREE.DirectionalLight(color,intensity); lamp.position.set(x,y,z); scene.add(lamp);
@@ -72,6 +74,7 @@ function mount(host) {
   const uniform = {
     backInk:{value:null},frontInk:{value:null},backRect:{value:new THREE.Vector4()},frontRect:{value:new THREE.Vector4()},
     inkTone:{value:new THREE.Color(1,1,1)},hasPrint:{value:0},
+    cottonDyeMean: { value: new THREE.Color(0xe3e3e3).r },
   };
   const bodyColors = [0x2c2d2a,0x62644d,0xbda787];
   const designFiles = {
@@ -115,9 +118,11 @@ function mount(host) {
         uniform vec4 backRect;
         uniform vec4 frontRect;
         uniform vec3 inkTone;
-        uniform float hasPrint;`)
+        uniform float hasPrint;
+        uniform float cottonDyeMean;`)
         .replace('#include <color_fragment>', `
         #include <color_fragment>
+        float inkCoverage = 0.0;
         if (hasPrint > 0.5) {
           bool rear = garmentPoint.z < 0.0;
           vec4 region = rear ? backRect : frontRect;
@@ -129,11 +134,22 @@ function mount(host) {
             float palePigment = smoothstep(0.28, 0.49, ink.r) *
               (1.0 - smoothstep(0.36, 0.68, (ink.r - ink.g) / max(ink.r,0.001)));
             vec3 printColor = mix(ink.rgb, ink.rgb * inkTone, palePigment);
-            diffuseColor.rgb = mix(diffuseColor.rgb, printColor, ink.a);
+            // The same yarn relief continues underneath the screenprint. Ink
+            // sits on the crowns while a little dye shows through the valleys.
+            float yarn = 1.0;
+            #ifdef USE_MAP
+              yarn = sampledDiffuseColor.g / cottonDyeMean;
+            #endif
+            inkCoverage = ink.a * mix(0.87, 0.985, smoothstep(0.76, 1.07, yarn));
+            printColor *= mix(1.0, yarn, 0.48);
+            diffuseColor.rgb = mix(diffuseColor.rgb, printColor, inkCoverage);
           }
-        }`);
+        }`)
+        .replace('#include <roughnessmap_fragment>', `
+        #include <roughnessmap_fragment>
+        roughnessFactor = mix(roughnessFactor, 0.86, inkCoverage * 0.72);`);
     };
-    material.customProgramCacheKey=()=> 'bulbul-jersey-ink-v1';
+    material.customProgramCacheKey=()=> 'bulbul-jersey-ink-v2';
   }
   function loadInk(file) {
     if (textures.has(file)) return textures.get(file);
@@ -151,7 +167,10 @@ function mount(host) {
     try { sessionStorage.setItem('bulbul3d-selection',JSON.stringify(state)); } catch {}
   }
   function updateColor() {
-    fabric?.color.setHex(bodyColors[state.color]);
+    if (fabric) {
+      fabric.color.setHex(bodyColors[state.color]);
+      if (fabric.map) fabric.color.multiplyScalar(1 / uniform.cottonDyeMean.value);
+    }
     uniform.inkTone.value.setHex(state.color===2 ? 0x776757 : 0xffffff);
     invalidate();
   }
@@ -181,29 +200,80 @@ function mount(host) {
     });
   }
 
+  // Camera windows are measured in metres across the front of the garment.
+  const windows = {
+    full: { width: .88, height: .81, y: 0 },
+    print: { width: .40, height: .41, y: .077 },
+    fabric: { width: .16, height: .13, y: -.214 },
+    collar: { width: .33, height: .19, y: .283 },
+    hem: { width: .28, height: .15, y: -.289 },
+  };
+  function frameCamera() {
+    const frame = windows[state.detail ? state.inspection : 'full'];
+    let {width, height, y} = frame;
+    // The lower flank catches both the jersey loops and the turn of a fold.
+    let x = state.detail && state.inspection === 'fabric' ? -.105 : 0;
+    if (state.detail) {
+      if (state.inspection === 'print') {
+        // The chest mark is smaller and sits off-centre. Track it through a turn.
+        const direction = Math.cos(state.ry);
+        const front = THREE.MathUtils.smoothstep(direction, 0, .88);
+        x = .114 * front * direction;
+        y += .07 * front;
+        width -= .22 * front;
+        height -= .21 * front;
+      }
+      y = y * Math.cos(state.rx) - .135 * Math.sin(state.rx);
+    }
+    const tangent = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const distance = Math.max(height, width / camera.aspect) / tangent;
+    camera.position.set(x, y, distance + .145);
+    camera.lookAt(x, y, 0);
+    shadow.visible = !state.detail;
+  }
   function syncCamera() {
-    const width=host.clientWidth,height=host.clientHeight;
-    if(!width||!height)return;
-    renderer.setSize(width,height,false);camera.aspect=width/height;
-    const tangent=2*Math.tan(THREE.MathUtils.degToRad(camera.fov*.5));
-    const distance=Math.max(.81/tangent,.88/(tangent*camera.aspect))+.13;
-    const target=state.detail ? .12 : 0;
-    camera.position.set(0,target,distance*(state.detail ? .53 : 1));
-    camera.lookAt(0,target,0);camera.updateProjectionMatrix();shadow.visible=!state.detail;invalidate();
+    const width = host.clientWidth, height = host.clientHeight;
+    if (!width || !height) return;
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    frameCamera();
+    invalidate();
   }
   function setSide(which){
     state.rx=-.045;state.ry=which==='front'?0:Math.PI;
-    pivot.rotation.set(state.rx,state.ry,0);lastInput=performance.now();invalidate();save();
+    pivot.rotation.set(state.rx,state.ry,0);lastInput=performance.now();frameCamera();invalidate();save();
   }
-  function setDetail(enabled){state.detail=Boolean(enabled);lastInput=performance.now();syncCamera();}
+  let resumeAfterDetail = false;
+  function setDetail(enabled) {
+    if (state.detail === enabled) return;
+    state.detail = Boolean(enabled);
+    if (state.detail) {
+      resumeAfterDetail = !paused;
+      paused = true;
+    } else if (resumeAfterDetail) {
+      paused = false;
+      resumeAfterDetail = false;
+    }
+    showRotation();
+    lastInput = performance.now();
+    frameCamera();
+    invalidate();
+  }
+  function setInspection(area) {
+    if (!Object.hasOwn(windows, area) || area === 'full') return;
+    state.inspection = area;
+    frameCamera();
+    invalidate();
+  }
   back.onclick=()=>setSide('back');front.onclick=()=>setSide('front');
   function showRotation(){rotation.textContent=paused?'Включить вращение':'Остановить вращение';rotation.setAttribute('aria-pressed',String(!paused));}
-  function motionChanged(){paused=reducedMotion.matches;showRotation();invalidate();}
+  function motionChanged(){resumeAfterDetail=false;paused=reducedMotion.matches||state.detail;showRotation();invalidate();}
   showRotation();reducedMotion.addEventListener('change',motionChanged);
-  rotation.onclick=()=>{paused=!paused;lastInput=performance.now();showRotation();invalidate();};
+  rotation.onclick=()=>{resumeAfterDetail=false;paused=!paused;lastInput=performance.now();showRotation();invalidate();};
   function turn(dx,dy){
     state.ry+=dx;state.rx=THREE.MathUtils.clamp(state.rx+dy,-.48,.48);
-    pivot.rotation.set(state.rx,state.ry,0);lastInput=performance.now();invalidate();
+    pivot.rotation.set(state.rx,state.ry,0);if(state.detail)frameCamera();lastInput=performance.now();invalidate();
   }
   canvas.addEventListener('pointerdown',e=>{
     if(!e.isPrimary)return;
@@ -242,7 +312,9 @@ function mount(host) {
       if(!node.isMesh)return;
       if(!fabric){
         fabric=node.material;addPrintLayer(fabric);
-        for(const texture of [fabric.normalMap,fabric.roughnessMap])if(texture)texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);
+        for (const texture of [fabric.map, fabric.normalMap, fabric.roughnessMap]) {
+          if (texture) texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+        }
       }
     });
     updateColor();pivot.add(garment);invalidate();
@@ -253,7 +325,7 @@ function mount(host) {
     const dt=Math.min(.05,Math.max(0,(time-lastTime)/1000));lastTime=time;
     if(!visible||document.hidden)return;
     if(!paused&&!drag&&garment)frame=requestAnimationFrame(loop);
-    if(!paused&&!drag&&time-lastInput>2500&&garment){state.ry+=dt*.12;pivot.rotation.y=state.ry;dirty=true;}
+    if(!paused&&!drag&&time-lastInput>2500&&garment){state.ry+=dt*.12;pivot.rotation.y=state.ry;if(state.detail)frameCamera();dirty=true;}
     if(!dirty)return;
     renderer.render(scene,camera);dirty=false;
     if(!garment)return;
@@ -276,13 +348,13 @@ function mount(host) {
     }
   }
   window.Bulbul3D={
-    setProduct,setSide,setDetail,getState:()=>({...state}),getPerformance:()=>structuredClone(perf),
+    setProduct,setSide,setDetail,setInspection,getState:()=>({...state}),getPerformance:()=>structuredClone(perf),
     dispose(){
       disposed=true;generation++;save();cancelAnimationFrame(frame);resizer.disconnect();observer?.disconnect();
       reducedMotion.removeEventListener('change',motionChanged);
       document.removeEventListener('visibilitychange',invalidate);
       shadow.material.dispose();shadowTexture.dispose();
-      garment?.traverse(obj=>obj.geometry?.dispose());fabric?.normalMap?.dispose();fabric?.roughnessMap?.dispose();fabric?.dispose();
+      garment?.traverse(obj=>obj.geometry?.dispose());fabric?.map?.dispose();fabric?.normalMap?.dispose();fabric?.roughnessMap?.dispose();fabric?.dispose();
       for(const promise of textures.values())promise.then(t=>t.dispose()).catch(()=>{});
       renderer.dispose();canvas.remove();controls.remove();
     },

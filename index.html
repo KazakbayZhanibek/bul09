@@ -17,11 +17,11 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
   <link rel="apple-touch-icon-precomposed" href="apple-touch-icon.png" sizes="180x180">
   <link rel="preload" as="font" href="assets/fonts/oswald-field.woff2" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="studio.css">
+  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="studio.css?v=2">
   <script defer src="collection-data.js"></script>
-  <script defer src="studio.js"></script>
-  <script defer src="app.js"></script>
+  <script defer src="studio.js?v=2"></script>
+  <script defer src="app.js?v=2"></script>
 </head>
 <body id="top">
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -60,7 +60,7 @@
           <a class="button button-cream" href="#collection">Смотреть коллекцию <svg class="icon"><use href="#i-arrow"/></svg></a>
         </div>
         <div class="campaign-footer">
-          <div class="photo-caption" aria-live="polite" aria-atomic="true"><span class="photo-index" id="photo-index">01</span><span class="photo-total">/ 03</span><span class="caption-rule"></span><span id="photo-name">Барс в каньоне</span></div>
+          <div class="photo-caption" aria-live="polite" aria-atomic="true"><span class="photo-index" id="photo-index">01</span><span class="photo-total">/ 03</span><span class="caption-rule"></span><a class="photo-product" href="#collection" aria-label="Рассмотреть принт «Барс» на фото"><span id="photo-name">Барс в каньоне</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
           <div class="photo-controls" aria-label="Кадры кампании">
             <button class="photo-control prev" type="button" data-photo="-1" aria-label="Предыдущий кадр"><svg class="icon"><use href="#i-arrow"/></svg></button>
             <button class="photo-control" type="button" data-photo="1" aria-label="Следующий кадр"><svg class="icon"><use href="#i-arrow"/></svg></button>
@@ -74,6 +74,7 @@
           <div><p class="section-label"><span class="dash"></span>Первая коллекция</p><h2 class="title" id="collection-title">Символы степи</h2></div>
           <p class="collection-intro">Всадник, барс и беркут. Три принта<br class="wide-only"> в трёх природных оттенках.</p>
         </div>
+        <div class="print-nav" role="group" aria-label="Выбрать принт коллекции" hidden></div>
         <div class="products" id="products"></div>
         <noscript><p>Три дизайна коллекции — Всадник, Барс и Беркут. Для смены цветов и просмотра модели в 3D включите JavaScript.</p><img class="noscript-collection" src="assets/editorial/collection.webp" alt="Три рисунка футболок со спины"></noscript>
         <p class="collection-note">Концепты будущей коллекции. Оттенки и детали готовых изделий могут отличаться.</p>
@@ -91,6 +92,7 @@
           <h2 class="title" id="roots-title">Характер<br>в деталях<span>.</span></h2>
           <p>Bul Bul для нас — часть истории. В этом имени живут уважение и стойкость, которые передаются из поколения в поколение.</p>
           <p>Мы переносим орнамент, горный рельеф и живые символы степи на одежду для города и открытой местности. Хотим, чтобы она служила своему владельцу долгие годы.</p>
+          <a class="fabric-link" href="#studio-fabric">Рассмотреть ткань в 3D <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
           <div class="motto"><img src="assets/prints/eagle_chest.webp" alt="" width="44" height="28"><span lang="kk">Мақсат үшін жасалған.</span></div>
         </div>
       </div>
@@ -108,14 +110,16 @@
       <button class="dialog-close" type="button" aria-label="Закрыть просмотр"><svg class="icon"><use href="#i-close"/></svg></button>
       <div class="dialog-gallery">
         <img id="product-image" src="assets/editorial/horse-khaki.webp" alt="Футболка «Всадник» цвета хаки со спины" loading="lazy">
-        <div class="view-toggle" role="group" aria-label="Ракурс футболки"><button type="button" data-view="back" aria-pressed="true">Спина</button><button type="button" data-view="front" aria-pressed="false">Грудь</button></div>
+        <div class="dialog-views">
+          <p class="front-note" hidden>Эскиз на чёрной ткани</p>
+          <div class="view-toggle" role="group" aria-label="Ракурс футболки"><button type="button" data-view="back" aria-pressed="true">Со спины</button><button type="button" data-view="front" aria-pressed="false">Спереди</button></div>
+        </div>
       </div>
       <div class="dialog-info">
         <p class="section-label"><span class="dash"></span><span id="product-latin" lang="en"></span></p>
         <h2 class="title" id="product-title"></h2>
         <p id="product-description"></p>
-        <fieldset class="detail-colors"><legend>Цвет <span id="product-color"></span></legend><div class="swatches" id="detail-swatches"></div></fieldset>
-        <p class="front-note" hidden>Исходный эскиз спереди показан в чёрном цвете.</p>
+        <fieldset class="detail-colors"><legend><span id="color-purpose">Цвет футболки</span> <span id="product-color"></span></legend><div class="swatches" id="detail-swatches"></div></fieldset>
         <a class="button button-dark" id="product-studio" href="#studio"><svg class="icon"><use href="#i-cube"/></svg>Рассмотреть в 3D<svg class="icon"><use href="#i-arrow"/></svg></a>
         <p class="detail-release">Первый дроп готовится. Цены и размеры появятся позже.</p>
       </div>
