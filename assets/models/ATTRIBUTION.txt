@@ -1,8 +1,20 @@
+Source garment geometry
 Oversized t-shirt by kylelhb
-Author: https://sketchfab.com/kylelhb
-Original source: https://sketchfab.com/3d-models/oversized-t-shirt-3b6e78d6a1a74370a6e5af6f312d38f7
+Creator: https://sketchfab.com/kylelhb
+Original work: https://sketchfab.com/3d-models/oversized-t-shirt-3b6e78d6a1a74370a6e5af6f312d38f7
 License: Creative Commons Attribution 4.0 International
 https://creativecommons.org/licenses/by/4.0/
-Attribution and license are preserved in the original GLB asset.extras metadata.
 
-Modifications for the BUL BUL CORP visualization: replaced source material with plain fabric, reduced mesh complexity while retaining boundaries, meshopt compression, recoloring, and projected transparent BUL BUL CORP artwork. This is a third-party garment visualization, not a scan or manufacturing pattern of the future product. The original author does not endorse these modifications. Retain this attribution and indicate changes on redistribution.
+The original website supplied threadlab-fixed.glb, an optimized derivative of
+this garment with simplified panels, meshopt compression and a plain material.
+
+The BUL BUL CORP field-tee.glb adaptation reshapes and subdivides those panels
+for a wider, dropped-shoulder fit. It adds sculpted folds, an undulating hem,
+modeled rib-knit neck binding, and two rows of raised stitching at the cuffs
+and hem. Shoulder stitching, fabric UVs and the repeating cotton jersey normal
+and roughness maps were prepared for this collection. The website changes the
+cloth color and applies the collection's existing front and back artwork.
+
+Source geometry and modifications are identified here for redistribution.
+The model illustrates a collection concept. The source author does not
+endorse the adaptation.
